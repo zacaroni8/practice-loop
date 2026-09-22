@@ -104,4 +104,14 @@ The spike itself surfaced a real, separate gap worth remembering going into Phas
 
 **Pace check.** Zac raised concern that "a few weeks" have passed since Phase 1 started. Checked against actual hours, not calendar time: only ~8 hours logged so far, comfortably inside the 26–60 hour budget for the whole project. Some of the calendar stretch is real work (David asked Zac to research competing apps, which took real time outside chat). Not a hours-budget problem yet — but worth naming plainly: calendar time quietly stretching out while hours stay low is a small-scale instance of the exact "falls out of schedule" pattern this whole project exists to counteract. Not a crisis, just worth Zac noticing in himself now rather than after the pattern compounds.
 
+## Phase 5 — Workshop Scaffolding
+
+Verified real Claude Code syntax (slash commands are now implemented as skills under `.claude/skills/`; hooks live in `.claude/settings.json`; subagents in `.claude/agents/`) against official docs before building anything, per this project's own rule not to guess. Built and committed separately: `Project Conventions` section in CLAUDE.md (SessionStore-only JDBC, resizable layouts, matching creator popups), `/next-milestone` command (reads SPEC.md + JOURNAL.md, starts plan mode), `xp-formula` skill (auto-triggers on XP formula work — kept after Zac correctly challenged whether a mostly-one-time task deserved a skill; justified by the zero-division landmine and the formula's actual multi-revision history in this project), `debug-helper` subagent (investigates unfamiliar errors/APIs in JavaFX/SQLite/JDBC, reports back in plain language, never edits files itself).
+
+**Build tooling decided: plain `javac`/`java`, no Maven/Gradle.** Only two dependency jars needed (SQLite JDBC driver, JavaFX SDK) — not enough to justify a build tool on top of three other brand-new technologies already in scope, and it keeps David's setup (per Definition of Done) simple.
+
+**Two hooks, both committed:** a PreToolUse guardrail blocking any non-`SessionStore.java` edit that introduces JDBC/SQL code (gives the CLAUDE.md rule real teeth instead of relying on memory), and a PostToolUse automation that compile-checks the whole `src/` tree against `lib/` after any `.java` edit — skips gracefully until Milestone 1 actually creates that layout.
+
+**MCP server: skipped, deliberately.** Practice Loop is a fully local, single-user desktop app — no API, no server, no sync, nothing external to ever connect to. Building one would be scaffolding for its own sake, which this project's own Phase 5 rules explicitly warn against. No file created; this paragraph is the intentional substitute.
+
 Session paused again here — Zac is following up with David before the next session.
