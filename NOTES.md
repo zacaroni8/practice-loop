@@ -114,4 +114,12 @@ Verified real Claude Code syntax (slash commands are now implemented as skills u
 
 **MCP server: skipped, deliberately.** Practice Loop is a fully local, single-user desktop app — no API, no server, no sync, nothing external to ever connect to. Building one would be scaffolding for its own sake, which this project's own Phase 5 rules explicitly warn against. No file created; this paragraph is the intentional substitute.
 
+## Phase 6 — The Build Loop
+
+**Milestone 1 (create and see it): implemented, committed, but the process was wrong.** Downloaded real dependencies (sqlite-jdbc 3.53.4.0, JavaFX SDK 25.0.4 for Windows), built SessionStore/Activity/Session/MainView/Main, verified compilation, a clean app launch, and persistence across a simulated restart directly (not through the actual GUI — that still needs Zac to click through by hand). But all five files were written in one pass with a single explain-back question at the end, which is exactly the "fast output over understanding" pattern flagged about Zac back in Phase 1. Called out directly by Zac: "i thought i would be more involved but you kinda just coded everything." Not excused as a technicality — corrected.
+
+**Process change, effective Milestone 2 onward:** implement in small pieces, pausing after each one to explain it and ask a specific question before moving to the next — not one large dump reviewed afterward. Zac gets more of the actual structural/design decisions within a milestone, not just the plan-level ones. Milestone 1 itself stays as-is (Zac's call — not worth redoing given the time cost, now that the explain-back on SQL injection/prepared statements actually happened properly).
+
+**Real explain-back that did happen:** why `SessionStore` uses `?` placeholders instead of building SQL strings directly. Landed on the concrete, low-stakes version that actually matters at this app's two-person scale — an apostrophe in a normal name (e.g. "Zac's Practice") breaks naive string concatenation with zero malicious intent — rather than over-indexing on the adversarial-attacker framing, which barely applies when the only two users are Zac and David.
+
 Session paused again here — Zac is following up with David before the next session.
