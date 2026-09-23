@@ -2,6 +2,7 @@ package practiceloop;
 
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
+import javafx.event.ActionEvent;
 import javafx.geometry.Insets;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
@@ -59,6 +60,17 @@ public class MainView {
 
         Scene scene = new Scene(root, 500, 400);
         return scene;
+    }
+
+    /** True if [start, start+plannedMinutes) overlaps any other still-scheduled session. */
+    private boolean overlapsExistingSession(LocalDateTime start, int plannedMinutes) {
+        LocalDateTime end = start.plusMinutes(plannedMinutes);
+        return store.listSessions().stream()
+                .filter(s -> "scheduled".equals(s.status))
+                .anyMatch(s -> {
+                    LocalDateTime existingEnd = s.scheduledTime.plusMinutes(s.plannedMinutes);
+                    return start.isBefore(existingEnd) && s.scheduledTime.isBefore(end);
+                });
     }
 
     private Optional<Session> soonestScheduled() {
@@ -226,9 +238,23 @@ public class MainView {
 
         dialog.getDialogPane().setContent(grid);
         dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
-        dialog.getDialogPane().lookupButton(ButtonType.OK).disableProperty().bind(
+        Button okButton = (Button) dialog.getDialogPane().lookupButton(ButtonType.OK);
+        okButton.disableProperty().bind(
                 datePicker.valueProperty().isNull().or(nameField.textProperty().isEmpty())
         );
+        okButton.addEventFilter(ActionEvent.ACTION, event -> {
+            LocalDateTime candidateStart = LocalDateTime.of(
+                    datePicker.getValue(),
+                    LocalTime.of(hourBox.getValue(), minuteBox.getValue())
+            );
+            int candidateMinutes = Integer.parseInt(plannedMinutesField.getText());
+            if (overlapsExistingSession(candidateStart, candidateMinutes)) {
+                new Alert(Alert.AlertType.ERROR,
+                        "This overlaps an already-scheduled session. Pick a different time.")
+                        .showAndWait();
+                event.consume();
+            }
+        });
 
         dialog.setResultConverter(buttonType -> {
             if (buttonType == ButtonType.OK) {
