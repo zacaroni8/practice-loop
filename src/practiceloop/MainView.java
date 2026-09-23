@@ -5,8 +5,9 @@ import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
+import java.time.LocalTime;
 import java.util.List;
 
 public class MainView {
@@ -92,8 +93,17 @@ public class MainView {
 
         TextField nameField = new TextField();
         TextField descriptionField = new TextField();
-        TextField scheduledTimeField = new TextField(LocalDateTime.now().plusMinutes(5)
-                .format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm")));
+
+        LocalDateTime defaultTime = LocalDateTime.now().plusMinutes(5);
+        DatePicker datePicker = new DatePicker(defaultTime.toLocalDate());
+        ComboBox<Integer> hourBox = new ComboBox<>();
+        for (int h = 0; h < 24; h++) hourBox.getItems().add(h);
+        hourBox.setValue(defaultTime.getHour());
+        ComboBox<Integer> minuteBox = new ComboBox<>();
+        for (int m = 0; m < 60; m += 5) minuteBox.getItems().add(m);
+        minuteBox.setValue((defaultTime.getMinute() / 5) * 5);
+        HBox timeBox = new HBox(5, datePicker, hourBox, new Label(":"), minuteBox);
+
         TextField plannedMinutesField = new TextField("25");
         TextField leadMinutesField = new TextField("15");
 
@@ -114,18 +124,23 @@ public class MainView {
         grid.addRow(0, new Label("Activity (optional)"), activityBox);
         grid.addRow(1, new Label("Name"), nameField);
         grid.addRow(2, new Label("Description"), descriptionField);
-        grid.addRow(3, new Label("Scheduled time (yyyy-MM-ddTHH:mm)"), scheduledTimeField);
+        grid.addRow(3, new Label("Scheduled time"), timeBox);
         grid.addRow(4, new Label("Planned minutes"), plannedMinutesField);
         grid.addRow(5, new Label("Lead minutes"), leadMinutesField);
 
         dialog.getDialogPane().setContent(grid);
         dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
+        dialog.getDialogPane().lookupButton(ButtonType.OK)
+                .disableProperty().bind(datePicker.valueProperty().isNull());
 
         dialog.setResultConverter(buttonType -> {
             if (buttonType == ButtonType.OK) {
                 Activity selected = activityBox.getValue();
                 Integer activityId = selected == null ? null : selected.id;
-                LocalDateTime scheduledTime = LocalDateTime.parse(scheduledTimeField.getText());
+                LocalDateTime scheduledTime = LocalDateTime.of(
+                        datePicker.getValue(),
+                        LocalTime.of(hourBox.getValue(), minuteBox.getValue())
+                );
                 store.createSession(
                         activityId,
                         nameField.getText(),
