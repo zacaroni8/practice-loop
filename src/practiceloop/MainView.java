@@ -106,6 +106,12 @@ public class MainView {
     }
 
     private void updateCountdown() {
+        if (activeSession != null) {
+            countdownLabel.setText("");
+            startButton.setDisable(true);
+            return;
+        }
+
         Optional<Session> soonest = soonestScheduled();
 
         if (soonest.isEmpty()) {
@@ -153,6 +159,8 @@ public class MainView {
 
         dialog.getDialogPane().setContent(grid);
         dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
+        dialog.getDialogPane().lookupButton(ButtonType.OK)
+                .disableProperty().bind(nameField.textProperty().isEmpty());
 
         dialog.setResultConverter(buttonType -> {
             if (buttonType == ButtonType.OK) {
@@ -218,8 +226,9 @@ public class MainView {
 
         dialog.getDialogPane().setContent(grid);
         dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
-        dialog.getDialogPane().lookupButton(ButtonType.OK)
-                .disableProperty().bind(datePicker.valueProperty().isNull());
+        dialog.getDialogPane().lookupButton(ButtonType.OK).disableProperty().bind(
+                datePicker.valueProperty().isNull().or(nameField.textProperty().isEmpty())
+        );
 
         dialog.setResultConverter(buttonType -> {
             if (buttonType == ButtonType.OK) {
