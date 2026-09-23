@@ -1,18 +1,24 @@
 package practiceloop;
 
+import javafx.animation.KeyFrame;
+import javafx.animation.Timeline;
 import javafx.geometry.Insets;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
+import javafx.util.Duration;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Optional;
 
 public class MainView {
     private final SessionStore store;
     private final ListView<Session> sessionList = new ListView<>();
+    private final Label countdownLabel = new Label();
 
     public MainView(SessionStore store) {
         this.store = store;
@@ -29,10 +35,17 @@ public class MainView {
         buttons.setPadding(new Insets(10));
 
         VBox.setVgrow(sessionList, Priority.ALWAYS);
-        VBox root = new VBox(10, buttons, sessionList);
+        VBox root = new VBox(10, buttons, countdownLabel, sessionList);
         root.setPadding(new Insets(10));
 
         refreshSessionList();
+        updateCountdown();
+
+        Timeline countdownTicker = new Timeline(
+                new KeyFrame(Duration.seconds(1), e -> updateCountdown())
+        );
+        countdownTicker.setCycleCount(Timeline.INDEFINITE);
+        countdownTicker.play();
 
         Scene scene = new Scene(root, 500, 400);
         return scene;
@@ -41,6 +54,30 @@ public class MainView {
     private void refreshSessionList() {
         List<Session> sessions = store.listSessions();
         sessionList.getItems().setAll(sessions);
+    }
+
+    private void updateCountdown() {
+        Optional<Session> soonest = store.listSessions().stream()
+                .filter(s -> "scheduled".equals(s.status))
+                .min(Comparator.comparing(s -> s.scheduledTime));
+
+        if (soonest.isEmpty()) {
+            countdownLabel.setText("No upcoming sessions");
+            return;
+        }
+
+        Session s = soonest.get();
+        LocalDateTime now = LocalDateTime.now();
+        if (!now.isBefore(s.scheduledTime)) {
+            countdownLabel.setText(s.name + " is ready to start");
+            return;
+        }
+
+        java.time.Duration remaining = java.time.Duration.between(now, s.scheduledTime);
+        long h = remaining.toHours();
+        long m = remaining.toMinutesPart();
+        long sec = remaining.toSecondsPart();
+        countdownLabel.setText("Next: " + s.name + " in " + h + "h " + m + "m " + sec + "s");
     }
 
     private void showAddActivityDialog() {
