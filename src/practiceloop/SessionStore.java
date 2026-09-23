@@ -97,6 +97,17 @@ public class SessionStore {
         }
     }
 
+    public void completeSession(int sessionId, int completedMinutes) {
+        String sql = "UPDATE sessions SET status = 'completed', completed_minutes = ? WHERE id = ?";
+        try (Connection c = connect(); PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setInt(1, completedMinutes);
+            ps.setInt(2, sessionId);
+            ps.executeUpdate();
+        } catch (SQLException e) {
+            throw new RuntimeException("Failed to complete session", e);
+        }
+    }
+
     public List<Session> listSessions() {
         String sql = "SELECT id, activity_id, name, description, scheduled_time, planned_minutes, " +
                 "lead_minutes, completed_minutes, xp_awarded, status FROM sessions ORDER BY scheduled_time";

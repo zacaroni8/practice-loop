@@ -11,7 +11,7 @@ public class Main extends Application {
     public void start(Stage stage) {
         SessionStore store = new SessionStore("practiceloop.db");
         NotificationScheduler notifier = new NotificationScheduler(store);
-        MainView view = new MainView(store);
+        MainView view = new MainView(store, notifier);
         stage.setTitle("Practice Loop");
         stage.setScene(view.createScene());
         stage.show();
