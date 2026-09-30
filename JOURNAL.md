@@ -19,3 +19,11 @@ What broke — all found by Zac actually using it, not by me: the countdown labe
 Learned: the explain-back questions aren't just busywork tacked onto implementation — the "why does the Set exist" one from Piece 2 came back and mattered again a few pieces later, for a real bug, not a hypothetical one.
 
 One known gap left open on purpose: closing the app mid-active-session loses that session's progress, since the data model only has `scheduled`/`completed` status, nothing for "in progress." Discussed and pinned rather than fixed — real scope to do properly, and not actually the failure mode this app is built to prevent.
+
+## Milestone 3 — XP, claimed and kept (in progress)
+
+First real authorship split: `XpCalculator` and its JUnit tests are Zac's own code, not generated. Wrote it wrong twice before it worked — first a plain syntax error (missing return type, no `assertEquals` import, a stray semicolon), then a real logic bug (the whole `recommendedXp * ratio` product was getting raised to the power, not just the ratio) that made every test fail except the trivial zero case. Debugged both from error output and a pointed question, not from being handed the fix.
+
+Bigger thing that came out of this milestone: Zac caught a real flaw in SPEC.md's own original XP formula — it was more XP-efficient per minute spent to stop a session around 75% and restart than to actually finish one. Verified with real numbers (36 XP/15min vs. 40 XP/20min). Replaced it with `recommendedXp * (completedMinutes/plannedMinutes)^1.3`, a shape that guarantees finishing is never worse than stopping early, for any exponent above 1 — not a patch, a structurally different fix. SPEC.md's Reward System, Success Criteria, and Test Plan sections all updated to match, per the `xp-formula` skill's own rule. Bonus: the new formula also deleted the zero-division guard entirely, since it no longer divides by `completedMinutes` at all.
+
+Still to come: `SessionStore` additions (`base_xp` column, `claimXp`, `getTotalXp`, extending `createSession`) — also Zac's to write, then the JavaFX wiring for the XP field, total display, stop-early, and claim button.
