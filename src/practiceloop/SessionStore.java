@@ -38,6 +38,7 @@ public class SessionStore {
                 "lead_minutes INTEGER," +
                 "completed_minutes INTEGER," +
                 "xp_awarded INTEGER," +
+                "base_xp INTEGER," +
                 "status TEXT NOT NULL DEFAULT 'scheduled')";
         try (Connection c = connect(); Statement st = c.createStatement()) {
             st.execute(activities);
@@ -70,9 +71,9 @@ public class SessionStore {
     }
 
     public Session createSession(Integer activityId, String name, String description,
-                                  LocalDateTime scheduledTime, int plannedMinutes, int leadMinutes) {
+                                  LocalDateTime scheduledTime, int plannedMinutes, int leadMinutes, int baseXp) {
         String sql = "INSERT INTO sessions (activity_id, name, description, scheduled_time, " +
-                "planned_minutes, lead_minutes, status) VALUES (?, ?, ?, ?, ?, ?, 'scheduled')";
+                "planned_minutes, lead_minutes, base_xp, status) VALUES (?, ?, ?, ?, ?, ?, ?, 'scheduled')";
         try (Connection c = connect();
              PreparedStatement ps = c.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             if (activityId == null) {
@@ -85,12 +86,13 @@ public class SessionStore {
             ps.setString(4, scheduledTime.toString());
             ps.setInt(5, plannedMinutes);
             ps.setInt(6, leadMinutes);
+            ps.setInt(7, baseXp);
             ps.executeUpdate();
             try (ResultSet keys = ps.getGeneratedKeys()) {
                 keys.next();
                 int id = keys.getInt(1);
                 return new Session(id, activityId, name, description, scheduledTime,
-                        plannedMinutes, leadMinutes, null, null, "scheduled");
+                        plannedMinutes, leadMinutes, null, baseXp, null, "scheduled");
             }
         } catch (SQLException e) {
             throw new RuntimeException("Failed to create session", e);
@@ -108,9 +110,43 @@ public class SessionStore {
         }
     }
 
+    public void claimXp(int sessionId, int xpAwarded)
+    {
+        String sql = "UPDATE sessions SET xp_awarded = ? WHERE id = ?";
+        try (Connection c = connect(); PreparedStatement ps = c.prepareStatement(sql))
+        {
+            ps.setInt(1, xpAwarded);
+            ps.setInt(2, sessionId);
+            ps.executeUpdate();
+        }
+        catch (SQLException e)
+        {
+            throw new RuntimeException("Failed to claim XP", e);
+        }
+    }
+
+    public int getTotalXp()
+    {
+        String sql = "SELECT SUM(xp_awarded) FROM sessions";
+        int total = 0;
+        try (Connection c = connect(); Statement st = c.createStatement();
+             ResultSet rs = st.executeQuery(sql))
+        {
+            while (rs.next())
+            {
+                total += rs.getInt(1);
+            }
+        }
+        catch(SQLException e)
+        {
+            throw new RuntimeException("Failed to get total XP", e);
+        }
+        return total;
+    }
+
     public List<Session> listSessions() {
         String sql = "SELECT id, activity_id, name, description, scheduled_time, planned_minutes, " +
-                "lead_minutes, completed_minutes, xp_awarded, status FROM sessions ORDER BY scheduled_time";
+                "lead_minutes, completed_minutes, base_xp, xp_awarded, status FROM sessions ORDER BY scheduled_time";
         List<Session> result = new ArrayList<>();
         try (Connection c = connect(); Statement st = c.createStatement();
              ResultSet rs = st.executeQuery(sql)) {
@@ -125,11 +161,12 @@ public class SessionStore {
                 int leadMinutes = rs.getInt("lead_minutes");
                 int rawCompleted = rs.getInt("completed_minutes");
                 Integer completedMinutes = rs.wasNull() ? null : rawCompleted;
+                int baseXp = rs.getInt("base_xp");
                 int rawXp = rs.getInt("xp_awarded");
                 Integer xpAwarded = rs.wasNull() ? null : rawXp;
                 String status = rs.getString("status");
                 result.add(new Session(id, activityId, name, description, scheduledTime,
-                        plannedMinutes, leadMinutes, completedMinutes, xpAwarded, status));
+                        plannedMinutes, leadMinutes, completedMinutes, baseXp, xpAwarded, status));
             }
         } catch (SQLException e) {
             throw new RuntimeException("Failed to list sessions", e);
