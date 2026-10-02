@@ -7,6 +7,7 @@ import javafx.geometry.Insets;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
+import javafx.util.Callback;
 import javafx.util.Duration;
 
 import java.time.LocalDate;
@@ -263,12 +264,25 @@ public class MainView {
 
         LocalDateTime defaultTime = LocalDateTime.now().plusMinutes(5);
         DatePicker datePicker = new DatePicker(defaultTime.toLocalDate());
+        Callback<ListView<Integer>, ListCell<Integer>> twoDigitCellFactory = lv -> new ListCell<>() {
+            @Override
+            protected void updateItem(Integer item, boolean empty) {
+                super.updateItem(item, empty);
+                setText(empty || item == null ? null : String.format("%02d", item));
+            }
+        };
+
         ComboBox<Integer> hourBox = new ComboBox<>();
         for (int h = 0; h < 24; h++) hourBox.getItems().add(h);
         hourBox.setValue(defaultTime.getHour());
+        hourBox.setCellFactory(twoDigitCellFactory);
+        hourBox.setButtonCell(twoDigitCellFactory.call(null));
+
         ComboBox<Integer> minuteBox = new ComboBox<>();
-        for (int m = 0; m < 60; m += 5) minuteBox.getItems().add(m);
-        minuteBox.setValue((defaultTime.getMinute() / 5) * 5);
+        for (int m = 0; m < 60; m++) minuteBox.getItems().add(m);
+        minuteBox.setValue((defaultTime.getMinute()));
+        minuteBox.setCellFactory(twoDigitCellFactory);
+        minuteBox.setButtonCell(twoDigitCellFactory.call(null));
         HBox timeBox = new HBox(5, datePicker, hourBox, new Label(":"), minuteBox);
 
         TextField plannedMinutesField = new TextField("25");
@@ -297,7 +311,7 @@ public class MainView {
         grid.addRow(3, new Label("Scheduled time"), timeBox);
         grid.addRow(4, new Label("Planned minutes"), plannedMinutesField);
         grid.addRow(5, new Label("Lead minutes"), leadMinutesField);
-        grid.addRow(6, new Label("Recommended XP"), baseXpField);
+        grid.addRow(6, new Label("XP (Whole Session)"), baseXpField);
 
         dialog.getDialogPane().setContent(grid);
         dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);

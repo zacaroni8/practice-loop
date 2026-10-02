@@ -13,7 +13,7 @@ FILE=$(echo "$INPUT" | grep -o '"file_path"[[:space:]]*:[[:space:]]*"[^"]*"' | h
 if [[ "$FILE" == *.java ]]; then
   if [ -d "src" ] && [ -d "lib" ]; then
     mkdir -p out
-    javac -cp "lib/*" -d out $(find src -name "*.java") 2>&1 | head -30
+    javac --module-path lib/javafx-sdk/lib --add-modules javafx.controls,javafx.fxml -cp "lib/*" -d out $(find src -name "*.java") 2>&1 | head -30
   else
     echo "src/ or lib/ not set up yet — compile check will activate once Milestone 1 creates the project layout." >&2
   fi

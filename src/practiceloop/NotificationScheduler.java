@@ -59,7 +59,7 @@ public class NotificationScheduler {
 
             if (!now.isBefore(reminderTime) && now.isBefore(s.scheduledTime)
                     && firedReminder.add(s.id)) {
-                long minutesUntil = Duration.between(now, s.scheduledTime).toMinutes();
+                long minutesUntil = (long)Math.floor(((double)Duration.between(now, s.scheduledTime).toSeconds()/60)+0.5);
                 trayIcon.displayMessage(
                         s.name,
                         s.description + " - starts at " + s.scheduledTime + " (" + minutesUntil + " min)",
