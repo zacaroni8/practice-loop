@@ -4,17 +4,21 @@ import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.event.ActionEvent;
 import javafx.geometry.Insets;
+import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
 import javafx.util.Callback;
 import javafx.util.Duration;
+import javafx.util.converter.DoubleStringConverter;
+import javafx.util.converter.IntegerStringConverter;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.Comparator;
 import java.util.List;
+import java.util.stream.Stream;
 import java.util.Optional;
 
 public class MainView {
@@ -26,9 +30,17 @@ public class MainView {
     private final Label activeLabel = new Label();
     private final Label totalXpLabel = new Label();
     private final Label claimLabel = new Label();
+    private final Button addActivityButton = new Button("Add Activity");
+    private final Button createSessionButton = new Button("Create Session");
     private final Button startButton = new Button("Start");
     private final Button stopEarlyButton = new Button("Stop Early");
     private final Button claimButton = new Button("Claim XP");
+    private final Button historyToggleButton = new Button("View History");
+    private final ComboBox<Activity> activityFilterBox = new ComboBox<>();
+    private final CheckBox miscOnlyCheck = new CheckBox("Misc only");
+    private final HBox filterRow = new HBox(10, activityFilterBox, miscOnlyCheck);
+
+    private boolean showingHistory = false;
 
     private Session activeSession;
     private LocalDateTime activeStartTime;
@@ -43,10 +55,7 @@ public class MainView {
     }
 
     public Scene createScene() {
-        Button addActivityButton = new Button("Add Activity");
         addActivityButton.setOnAction(e -> showAddActivityDialog());
-
-        Button createSessionButton = new Button("Create Session");
         createSessionButton.setOnAction(e -> showCreateSessionDialog());
 
         startButton.setOnAction(e -> startSoonestSession());
@@ -55,15 +64,24 @@ public class MainView {
         claimButton.setOnAction(e -> claimPendingXp());
         claimButton.setDisable(true);
 
+        historyToggleButton.setOnAction(e -> toggleHistory());
+        activityFilterBox.setPromptText("All Activities");
+        activityFilterBox.setOnAction(e -> refreshSessionList());
+        miscOnlyCheck.setOnAction(e -> {
+            activityFilterBox.setDisable(miscOnlyCheck.isSelected());
+            refreshSessionList();
+        });
+        setShown(filterRow, false);
+
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
 
         HBox buttons = new HBox(10, addActivityButton, createSessionButton, startButton,
-                stopEarlyButton, spacer, totalXpLabel);
+                stopEarlyButton, historyToggleButton, spacer, totalXpLabel);
         buttons.setPadding(new Insets(10));
 
         VBox.setVgrow(sessionList, Priority.ALWAYS);
-        VBox root = new VBox(10, buttons, countdownLabel, activeLabel, claimLabel, claimButton, sessionList);
+        VBox root = new VBox(10, buttons, filterRow, countdownLabel, activeLabel, claimLabel, claimButton, sessionList);
         root.setPadding(new Insets(10));
 
         refreshSessionList();
@@ -93,6 +111,31 @@ public class MainView {
                     LocalDateTime existingEnd = s.scheduledTime.plusMinutes(s.plannedMinutes);
                     return start.isBefore(existingEnd) && s.scheduledTime.isBefore(end);
                 });
+    }
+
+    private List<Session> upcomingSessions() 
+    {
+        return store.listSessions().stream()
+                    .filter(s -> "scheduled".equals(s.status)).toList();
+    }
+    
+    private List<Session> historySessions(Activity activityFilter, boolean miscOnly)
+    {
+        Stream<Session> returnList = store.listSessions().stream()
+                    .filter(s -> "completed".equals(s.status));
+        if(miscOnly)
+        {
+            returnList = returnList.filter(s -> null == s.activityId);
+        }
+        else if(activityFilter!= null)
+        {
+            returnList = returnList.filter(s -> s.activityId != null && activityFilter.id == s.activityId);
+        }
+        else
+        {
+            returnList = returnList;
+        }
+        return returnList.sorted((s1,s2) -> (s1.scheduledTime.isAfter(s2.scheduledTime)) ? 1: -1).toList();
     }
 
     private Optional<Session> soonestScheduled() {
@@ -173,11 +216,63 @@ public class MainView {
     }
 
     private void refreshSessionList() {
-        List<Session> sessions = store.listSessions();
+        List<Session> sessions = showingHistory
+                ? historySessions(activityFilterBox.getValue(), miscOnlyCheck.isSelected())
+                : upcomingSessions();
         sessionList.getItems().setAll(sessions);
     }
 
+    private static void setShown(Node node, boolean shown) {
+        node.setVisible(shown);
+        node.setManaged(shown);
+    }
+
+    /** A TextField that rejects any keystroke that wouldn't leave it as a valid whole number. */
+    private static TextField wholeNumberField(int defaultValue) {
+        TextField field = new TextField();
+        field.setTextFormatter(new TextFormatter<>(
+                new IntegerStringConverter(), defaultValue,
+                change -> change.getControlNewText().matches("\\d*") ? change : null
+        ));
+        return field;
+    }
+
+    /** Same idea, but allows one decimal point (for a rate like XP-per-minute). */
+    private static TextField decimalField(double defaultValue) {
+        TextField field = new TextField();
+        field.setTextFormatter(new TextFormatter<>(
+                new DoubleStringConverter(), defaultValue,
+                change -> change.getControlNewText().matches("\\d*\\.?\\d*") ? change : null
+        ));
+        return field;
+    }
+
+    private void toggleHistory() {
+        showingHistory = !showingHistory;
+        historyToggleButton.setText(showingHistory ? "Back to Upcoming" : "View History");
+
+        addActivityButton.setDisable(showingHistory);
+        createSessionButton.setDisable(showingHistory);
+        setShown(stopEarlyButton, !showingHistory);
+        setShown(claimButton, !showingHistory);
+        setShown(claimLabel, !showingHistory);
+        setShown(countdownLabel, !showingHistory);
+        setShown(activeLabel, !showingHistory);
+        setShown(filterRow, showingHistory);
+
+        if (showingHistory) {
+            activityFilterBox.getItems().setAll(store.listActivities());
+            startButton.setDisable(true);
+        }
+
+        refreshSessionList();
+        updateCountdown();
+    }
+
     private void updateCountdown() {
+        if (showingHistory) {
+            return;
+        }
         if (activeSession != null) {
             countdownLabel.setText("");
             startButton.setDisable(true);
@@ -215,9 +310,9 @@ public class MainView {
 
         TextField nameField = new TextField();
         TextField descriptionField = new TextField();
-        TextField plannedMinutesField = new TextField("25");
-        TextField leadMinutesField = new TextField("15");
-        TextField xpPerMinuteField = new TextField("1.0");
+        TextField plannedMinutesField = wholeNumberField(25);
+        TextField leadMinutesField = wholeNumberField(15);
+        TextField xpPerMinuteField = decimalField(1.0);
 
         GridPane grid = new GridPane();
         grid.setHgap(10);
@@ -231,8 +326,12 @@ public class MainView {
 
         dialog.getDialogPane().setContent(grid);
         dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
-        dialog.getDialogPane().lookupButton(ButtonType.OK)
-                .disableProperty().bind(nameField.textProperty().isEmpty());
+        dialog.getDialogPane().lookupButton(ButtonType.OK).disableProperty().bind(
+                nameField.textProperty().isEmpty()
+                        .or(plannedMinutesField.textProperty().isEmpty())
+                        .or(leadMinutesField.textProperty().isEmpty())
+                        .or(xpPerMinuteField.textProperty().isEmpty())
+        );
 
         dialog.setResultConverter(buttonType -> {
             if (buttonType == ButtonType.OK) {
@@ -285,9 +384,9 @@ public class MainView {
         minuteBox.setButtonCell(twoDigitCellFactory.call(null));
         HBox timeBox = new HBox(5, datePicker, hourBox, new Label(":"), minuteBox);
 
-        TextField plannedMinutesField = new TextField("25");
-        TextField leadMinutesField = new TextField("15");
-        TextField baseXpField = new TextField("25");
+        TextField plannedMinutesField = wholeNumberField(25);
+        TextField leadMinutesField = wholeNumberField(15);
+        TextField baseXpField = wholeNumberField(25);
 
         activityBox.setOnAction(e -> {
             Activity a = activityBox.getValue();
@@ -317,7 +416,11 @@ public class MainView {
         dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
         Button okButton = (Button) dialog.getDialogPane().lookupButton(ButtonType.OK);
         okButton.disableProperty().bind(
-                datePicker.valueProperty().isNull().or(nameField.textProperty().isEmpty())
+                datePicker.valueProperty().isNull()
+                        .or(nameField.textProperty().isEmpty())
+                        .or(plannedMinutesField.textProperty().isEmpty())
+                        .or(leadMinutesField.textProperty().isEmpty())
+                        .or(baseXpField.textProperty().isEmpty())
         );
         okButton.addEventFilter(ActionEvent.ACTION, event -> {
             LocalDateTime candidateStart = LocalDateTime.of(

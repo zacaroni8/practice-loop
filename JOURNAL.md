@@ -37,3 +37,15 @@ Three more real bugs, found by Zac using the app rather than by test: the hour/m
 Small naming correction, Zac's own catch: the XP field was still labeled/named "recommended" even though the user can freely override it before the session starts and that overridden number becomes the actual scoring base — not just a suggestion. Renamed to match.
 
 Milestone 3 manually verified end-to-end by Zac: create a session with the XP field shown and overridable, run one to full completion and claim it (total goes up by the full amount), stop one early and claim the reduced amount, close and reopen the app with the total still correct.
+
+## Milestone 4 — Multiple activities, sorted history
+
+Multiple activities and standalone ("Misc") sessions already worked end to end from earlier milestones — nothing new to build there, just verified. The real gap: the main list had no status filter at all, so completed sessions piled up permanently mixed in with upcoming ones.
+
+Authorship split held the same shape as Milestone 3: the filtering logic (`upcomingSessions()`, `historySessions(activityFilter, miscOnly)`) was Zac's, pattern-matched off `soonestScheduled()`/`overlapsExistingSession()` already in the file; the history-toggle UI (new button, activity filter `ComboBox`, "Misc only" checkbox, and making `refreshSessionList()` mode-aware) was mine, explained afterward.
+
+Real bugs, found the normal way — by compiling and by Zac working through the itemized list rather than being handed fixes: a stray unrelated typo (`totalXpLabel.setText(...)` missing its method name entirely, blocking the whole build before his new code could even be checked), a plural typo (`List<Sessions>`), a capitalization mismatch calling `store.ListSessions()`, a raw `Stream` used without its import, and a wrong field name (`Activity` doesn't have `.activityId`, just `.id`). One real logic bug survived compiling clean: filtering completed sessions down to one activity unboxes `Session.activityId` (nullable) against `Activity.id` (a primitive `int`) — for a Misc session (`activityId == null`), that throws `NullPointerException` at runtime, confirmed with a real throwaway test before pointing Zac at it rather than assuming. Zac's own fix was the correct one: a `s.activityId != null &&` short-circuit guard before the comparison.
+
+Separately, Zac caught a real, longer-standing gap while testing: non-numeric input in any minutes/XP field (`Integer.parseInt`/`Double.parseDouble`) threw an exception that only ever surfaced in the console, never to the actual user — unlike the scheduled-time picker, which structurally can't hold an invalid value. Fixed with `TextFormatter` (new to Zac, explained rather than handed over cold): a per-keystroke filter that rejects any edit that wouldn't leave the field as a valid whole number or decimal, the same way `DatePicker` already refuses garbage input — plus extending both dialogs' OK-button `disableProperty` bindings so an emptied field can't be submitted either.
+
+Milestone 4 manually verified by Zac: history toggle works, filtering by activity and by "Misc" both behave, upcoming view is no longer polluted by completed sessions.
