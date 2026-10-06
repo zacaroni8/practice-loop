@@ -23,7 +23,14 @@ built and tested against **Eclipse Temurin 25**:
 ## 2. Download the dependencies
 
 These are **not** included in the repo (they're large binary files, kept
-out of git on purpose) — you download them once, yourself:
+out of git on purpose) — you download them once, yourself.
+
+**Easiest option:** go to this repo's [Releases page](../../releases),
+grab `lib.zip` from the latest release, and unzip it into a `lib/`
+folder in the project root. That's it — skip to Step 3.
+
+**Manual option** (if you want different versions, or there's no release
+yet):
 
 1. Clone this repo, then create a `lib/` folder in its root if it
    doesn't already exist.
