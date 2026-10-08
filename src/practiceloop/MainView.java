@@ -311,7 +311,7 @@ public class MainView {
         TextField nameField = new TextField();
         TextField descriptionField = new TextField();
         TextField plannedMinutesField = wholeNumberField(25);
-        TextField leadMinutesField = wholeNumberField(15);
+        TextField leadMinutesField = wholeNumberField(5);
         TextField xpPerMinuteField = decimalField(1.0);
 
         GridPane grid = new GridPane();
@@ -385,8 +385,41 @@ public class MainView {
         HBox timeBox = new HBox(5, datePicker, hourBox, new Label(":"), minuteBox);
 
         TextField plannedMinutesField = wholeNumberField(25);
-        TextField leadMinutesField = wholeNumberField(15);
+        TextField leadMinutesField = wholeNumberField(5);
+        TextField xpPerMinuteField = decimalField(1.0);
         TextField baseXpField = wholeNumberField(25);
+
+        boolean[] updatingXpFields = {false};
+        Runnable recomputeBaseXp = () -> {
+            if (updatingXpFields[0]) return;
+            updatingXpFields[0] = true;
+            try {
+                double rate = Double.parseDouble(xpPerMinuteField.getText());
+                int minutes = Integer.parseInt(plannedMinutesField.getText());
+                baseXpField.setText(String.valueOf((int) Math.round(rate * minutes)));
+            } catch (NumberFormatException ignored) {
+            } finally {
+                updatingXpFields[0] = false;
+            }
+        };
+        Runnable recomputeRate = () -> {
+            if (updatingXpFields[0]) return;
+            updatingXpFields[0] = true;
+            try {
+                int baseXp = Integer.parseInt(baseXpField.getText());
+                int minutes = Integer.parseInt(plannedMinutesField.getText());
+                if (minutes != 0) {
+                    double rounded = Math.round(baseXp / (double) minutes * 100) / 100.0;
+                    xpPerMinuteField.setText(String.valueOf(rounded));
+                }
+            } catch (NumberFormatException ignored) {
+            } finally {
+                updatingXpFields[0] = false;
+            }
+        };
+        xpPerMinuteField.textProperty().addListener((obs, oldVal, newVal) -> recomputeBaseXp.run());
+        plannedMinutesField.textProperty().addListener((obs, oldVal, newVal) -> recomputeBaseXp.run());
+        baseXpField.textProperty().addListener((obs, oldVal, newVal) -> recomputeRate.run());
 
         activityBox.setOnAction(e -> {
             Activity a = activityBox.getValue();
@@ -395,8 +428,7 @@ public class MainView {
                 descriptionField.setText(a.description);
                 plannedMinutesField.setText(String.valueOf(a.defaultPlannedMinutes));
                 leadMinutesField.setText(String.valueOf(a.defaultLeadMinutes));
-                int recommendedXp = (int) Math.round(a.defaultXpPerMinute * a.defaultPlannedMinutes);
-                baseXpField.setText(String.valueOf(recommendedXp));
+                xpPerMinuteField.setText(String.valueOf(a.defaultXpPerMinute));
             }
         });
 
@@ -410,7 +442,8 @@ public class MainView {
         grid.addRow(3, new Label("Scheduled time"), timeBox);
         grid.addRow(4, new Label("Planned minutes"), plannedMinutesField);
         grid.addRow(5, new Label("Lead minutes"), leadMinutesField);
-        grid.addRow(6, new Label("XP (Whole Session)"), baseXpField);
+        grid.addRow(6, new Label("XP per minute"), xpPerMinuteField);
+        grid.addRow(7, new Label("XP (Whole Session)"), baseXpField);
 
         dialog.getDialogPane().setContent(grid);
         dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
@@ -420,6 +453,7 @@ public class MainView {
                         .or(nameField.textProperty().isEmpty())
                         .or(plannedMinutesField.textProperty().isEmpty())
                         .or(leadMinutesField.textProperty().isEmpty())
+                        .or(xpPerMinuteField.textProperty().isEmpty())
                         .or(baseXpField.textProperty().isEmpty())
         );
         okButton.addEventFilter(ActionEvent.ACTION, event -> {
@@ -428,14 +462,29 @@ public class MainView {
                     LocalTime.of(hourBox.getValue(), minuteBox.getValue())
             );
             int candidateMinutes = Integer.parseInt(plannedMinutesField.getText());
-            if (overlapsExistingSession(candidateStart, candidateMinutes)) {
-                new Alert(Alert.AlertType.ERROR,
-                        "This overlaps an already-scheduled session. Pick a different time.")
-                        .showAndWait();
-                event.consume();
+            if (overlapsExistingSession(candidateStart, candidateMinutes)) 
+            {
+                Alert confirm = new Alert(Alert.AlertType.CONFIRMATION,
+                "This session overlaps session times with another session. Are you sure you want to create this session?");
+                confirm.showAndWait().ifPresent(response -> {
+                    if (response != ButtonType.OK) 
+                    {
+                        event.consume();
+                    }
+                });
+            }
+            if (candidateMinutes > 240) 
+            {
+                Alert confirm = new Alert(Alert.AlertType.CONFIRMATION,
+                "This session is longer than 4 hours. Are you sure you want to create this session?");
+                confirm.showAndWait().ifPresent(response -> {
+                    if (response != ButtonType.OK) 
+                    {
+                        event.consume();
+                    }
+                });
             }
         });
-
         dialog.setResultConverter(buttonType -> {
             if (buttonType == ButtonType.OK) {
                 Activity selected = activityBox.getValue();
