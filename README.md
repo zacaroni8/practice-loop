@@ -20,28 +20,31 @@ built and tested against **Eclipse Temurin 25**:
    ```
    Both should print `25` (or higher).
 
-## 2. Download the dependencies
+## 2. Get the code and its dependencies
 
-These are **not** included in the repo (they're large binary files, kept
-out of git on purpose) — you download them once, yourself.
+1. **Clone this repo** (or download it as a ZIP from the green "Code"
+   button on GitHub and extract it) — this gives you everything under
+   `src/`, plus `run.bat`.
+2. The dependency jars/SDK are **not** included in the repo (they're
+   large binary files, kept out of git on purpose) — you download them
+   once, yourself, into a `lib/` folder you create in the project root
+   (the same folder that has `src/` and `run.bat` in it).
 
 **Easiest option:** go to this repo's [Releases page](../../releases),
-grab `lib.zip` from the latest release, and unzip it into a `lib/`
-folder in the project root. That's it — skip to Step 3.
+grab `lib.zip` from the latest release, and unzip its contents directly
+into that `lib/` folder. That's it — skip to Step 3.
 
 **Manual option** (if you want different versions, or there's no release
 yet):
 
-1. Clone this repo, then create a `lib/` folder in its root if it
-   doesn't already exist.
-2. **SQLite JDBC driver** — download `sqlite-jdbc-3.53.4.0.jar` from
+1. **SQLite JDBC driver** — download `sqlite-jdbc-3.53.4.0.jar` from
    https://github.com/xerial/sqlite-jdbc/releases and place it directly
    in `lib/`.
-3. **JavaFX SDK** — go to https://gluonhq.com/products/javafx/, pick
+2. **JavaFX SDK** — go to https://gluonhq.com/products/javafx/, pick
    version 25, your OS, and the **SDK** download (not jmods). Unzip it,
    and place the resulting folder in `lib/`, renamed to `javafx-sdk` (so
    you end up with `lib/javafx-sdk/lib/javafx.controls.jar`, etc.).
-4. *(Optional, only needed to run the automated tests)* **JUnit console
+3. *(Optional, only needed to run the automated tests)* **JUnit console
    standalone** — download
    `junit-platform-console-standalone-6.1.3.jar` from
    https://search.maven.org/artifact/org.junit.platform/junit-platform-console-standalone
