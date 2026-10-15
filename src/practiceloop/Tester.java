@@ -58,4 +58,25 @@ public class Tester
         assertEquals(40,calc.computeXp(40,20,20));
     }
 
+    @Test
+    public void levelCalculatorCap()
+    {
+        LevelCalculator calc = new LevelCalculator();
+        assertEquals(30, calc.levelForXp(12212031));
+    }
+
+    @Test
+    public void levelCalculatorPoor()
+    {
+        LevelCalculator calc = new LevelCalculator();
+        assertEquals(1, calc.levelForXp(1));
+    }
+
+    @Test
+    public void levelCalculator2()
+    {
+        LevelCalculator calc = new LevelCalculator();
+        assertEquals(2, calc.levelForXp(50));
+    }
+
 }
