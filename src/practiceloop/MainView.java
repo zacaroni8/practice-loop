@@ -8,6 +8,7 @@ import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
+import javafx.scene.paint.Color;
 import javafx.util.Callback;
 import javafx.util.Duration;
 import javafx.util.converter.DoubleStringConverter;
@@ -25,6 +26,7 @@ public class MainView {
     private final SessionStore store;
     private final NotificationScheduler notifier;
     private final XpCalculator xpCalculator = new XpCalculator();
+    private final LevelCalculator levelCalculator = new LevelCalculator();
     private final ListView<Session> sessionList = new ListView<>();
     private final Label countdownLabel = new Label();
     private final Label activeLabel = new Label();
@@ -36,9 +38,19 @@ public class MainView {
     private final Button stopEarlyButton = new Button("Stop Early");
     private final Button claimButton = new Button("Claim XP");
     private final Button historyToggleButton = new Button("View History");
+    private final Button customizeButton = new Button("Customize");
     private final ComboBox<Activity> activityFilterBox = new ComboBox<>();
     private final CheckBox miscOnlyCheck = new CheckBox("Misc only");
     private final HBox filterRow = new HBox(10, activityFilterBox, miscOnlyCheck);
+    private final HBox buttonsBar = new HBox(10);
+
+    /** Levels at which each preset swatch unlocks, same order as PRESET_COLORS. */
+    private static final int[] PRESET_LEVELS = {1, 5, 10, 15, 20, 25};
+    private static final Color[] PRESET_COLORS = {
+            Color.DODGERBLUE, Color.SEAGREEN, Color.MEDIUMPURPLE,
+            Color.DARKORANGE, Color.CRIMSON, Color.GOLD
+    };
+    private static final int CUSTOM_PICKER_LEVEL = 30;
 
     private boolean showingHistory = false;
 
@@ -65,6 +77,7 @@ public class MainView {
         claimButton.setDisable(true);
 
         historyToggleButton.setOnAction(e -> toggleHistory());
+        customizeButton.setOnAction(e -> showCustomizeDialog());
         activityFilterBox.setPromptText("All Activities");
         activityFilterBox.setOnAction(e -> refreshSessionList());
         miscOnlyCheck.setOnAction(e -> {
@@ -76,17 +89,22 @@ public class MainView {
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
 
-        HBox buttons = new HBox(10, addActivityButton, createSessionButton, startButton,
-                stopEarlyButton, historyToggleButton, spacer, totalXpLabel);
-        buttons.setPadding(new Insets(10));
+        buttonsBar.getChildren().addAll(addActivityButton, createSessionButton, startButton,
+                stopEarlyButton, historyToggleButton, customizeButton, spacer, totalXpLabel);
+        buttonsBar.setPadding(new Insets(10));
 
         VBox.setVgrow(sessionList, Priority.ALWAYS);
-        VBox root = new VBox(10, buttons, filterRow, countdownLabel, activeLabel, claimLabel, claimButton, sessionList);
+        VBox root = new VBox(10, buttonsBar, filterRow, countdownLabel, activeLabel, claimLabel, claimButton, sessionList);
         root.setPadding(new Insets(10));
 
         refreshSessionList();
         updateCountdown();
         updateTotalXpLabel();
+
+        String savedColor = store.getEquippedColor();
+        if (savedColor != null) {
+            applyAccentColor(savedColor);
+        }
 
         Timeline countdownTicker = new Timeline(
                 new KeyFrame(Duration.seconds(1), e -> updateCountdown())
@@ -225,6 +243,63 @@ public class MainView {
     private static void setShown(Node node, boolean shown) {
         node.setVisible(shown);
         node.setManaged(shown);
+    }
+
+    private void applyAccentColor(String hexColor) {
+        buttonsBar.setStyle("-fx-background-color: " + hexColor + ";");
+    }
+
+    private static String toHex(Color c) {
+        return String.format("#%02X%02X%02X",
+                (int) Math.round(c.getRed() * 255),
+                (int) Math.round(c.getGreen() * 255),
+                (int) Math.round(c.getBlue() * 255));
+    }
+
+    private void showCustomizeDialog() {
+        int level = levelCalculator.levelForXp(store.getTotalXp());
+
+        Dialog<Void> dialog = new Dialog<>();
+        dialog.setTitle("Customize");
+
+        Label levelLabel = new Label("Level " + level);
+
+        HBox swatches = new HBox(10);
+        for (int i = 0; i < PRESET_LEVELS.length; i++) {
+            int requiredLevel = PRESET_LEVELS[i];
+            Color color = PRESET_COLORS[i];
+            String hex = toHex(color);
+
+            Button swatch = new Button();
+            swatch.setMinSize(30, 30);
+            swatch.setStyle("-fx-background-color: " + hex + ";");
+            swatch.setDisable(level < requiredLevel);
+            swatch.setTooltip(new Tooltip("Level " + requiredLevel));
+            swatch.setOnAction(e -> {
+                store.setEquippedColor(hex);
+                applyAccentColor(hex);
+                dialog.close();
+            });
+            swatches.getChildren().add(swatch);
+        }
+
+        VBox content = new VBox(15, levelLabel, swatches);
+        content.setPadding(new Insets(20));
+
+        if (level >= CUSTOM_PICKER_LEVEL) {
+            ColorPicker picker = new ColorPicker();
+            picker.setOnAction(e -> {
+                String hex = toHex(picker.getValue());
+                store.setEquippedColor(hex);
+                applyAccentColor(hex);
+                dialog.close();
+            });
+            content.getChildren().addAll(new Label("Custom color (unlocked at level 30):"), picker);
+        }
+
+        dialog.getDialogPane().setContent(content);
+        dialog.getDialogPane().getButtonTypes().add(ButtonType.CLOSE);
+        dialog.showAndWait();
     }
 
     /** A TextField that rejects any keystroke that wouldn't leave it as a valid whole number. */
