@@ -100,6 +100,7 @@ public class MainView {
         refreshSessionList();
         updateCountdown();
         updateTotalXpLabel();
+        checkInactivity();
 
         String savedColor = store.getEquippedColor();
         if (savedColor != null) {
@@ -160,6 +161,31 @@ public class MainView {
         return store.listSessions().stream()
                 .filter(s -> "scheduled".equals(s.status))
                 .min(Comparator.comparing(s -> s.scheduledTime));
+    }
+
+    private Optional<Session> lastCompletedSession()
+    {
+        return store.listSessions().stream()
+                .filter(s -> "completed".equals(s.status))
+                .max(Comparator.comparing(s -> s.scheduledTime));
+    }
+
+    public void checkInactivity()
+    {
+        Optional<Session> temp = lastCompletedSession();
+        if(temp.isEmpty())
+            return;
+        Session last = temp.get();
+        if(java.time.Duration.between(last.scheduledTime, LocalDateTime.now()).toDays() >= 3)
+        {
+            Alert confirm = new Alert(Alert.AlertType.CONFIRMATION,
+                "You haven't done the activity \"" + last.name + "\"in 3 days! You should create a session of it.");
+            confirm.showAndWait().ifPresent(response -> {
+                if (response == ButtonType.OK) {
+                    
+                }
+            });
+        }
     }
 
     private void startSoonestSession() {
