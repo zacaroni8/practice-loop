@@ -65,3 +65,13 @@ David asked for the reward system to "do something" beyond a bare number. Built 
 Zac's `levelForXp` has an unconventional shape — subtracts level costs in a loop until the budget goes negative, then backs off one level — but he could explain exactly why it works, including the deliberate design call that level 1 starts immediately rather than needing a "level 0" floor. No real bugs this round; everything passed on first compile/test.
 
 SPEC.md's Reward System and Non-Goals sections updated to reflect levels/unlocks as implemented rather than a v2 candidate.
+
+## Inactivity nudging
+
+SPEC.md's own problem statement names "nudging the user back in before the habit quietly lapses" — but nothing actually did that; the app only ever reminded you about sessions you'd already scheduled. Closed that gap: a one-time check on startup (`checkInactivity()`) that pops an alert if it's been 3+ days since the most recent completed session, pattern-matched entirely off code already in the file (`soonestScheduled()`'s shape for the date filtering, the existing `Alert` usage in `stopEarly()`) — no new concepts, so this one was fully Zac's.
+
+Two real bugs along the way: a typo calling `listSession()` instead of `listSessions()`, and forgetting to actually save the file before recompiling (same recurring pattern as earlier milestones). One real design/API bug, not just a typo: trying to call `.scheduledTime` directly on the `Optional<Session>` returned by `lastCompletedSession()` instead of unwrapping it with `.get()` first — same shape as the `Optional` handling already used in `startSoonestSession()`, which Zac located and matched correctly once pointed at it.
+
+Caught during review, not by the compiler: the alert was built as `Alert.AlertType.CONFIRMATION` (OK/Cancel) with an empty `ifPresent` block that did nothing on either button — fixed to `Alert.AlertType.INFORMATION`, which is the correct type for something purely informational with no action behind the button. Also made `checkInactivity()` `private`, matching every other internal helper in the file (it had been left `public` with no outside caller).
+
+Manually verified: nudge fires correctly for a stale completed session, and stays silent for both a brand-new database (no completed sessions) and one completed within the last couple of days.
