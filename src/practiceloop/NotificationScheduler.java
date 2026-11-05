@@ -22,7 +22,7 @@ import java.util.Set;
 public class NotificationScheduler {
     private final SessionStore store;
     private TrayIcon trayIcon;
-    private final Set<Integer> firedReminder = new HashSet<>();
+    private final Set<String> firedReminder = new HashSet<>();
     private final Set<Integer> firedStartingNow = new HashSet<>();
 
     public NotificationScheduler(SessionStore store) {
@@ -54,21 +54,24 @@ public class NotificationScheduler {
         LocalDateTime now = LocalDateTime.now();
         for (Session s : store.listSessions()) {
             if (!"scheduled".equals(s.status)) continue;
+            for(Integer offset : s.reminderOffsets)
+            {
+                LocalDateTime reminderTime = s.scheduledTime.minusMinutes(offset);
 
-            LocalDateTime reminderTime = s.scheduledTime.minusMinutes(s.leadMinutes);
+                if (!now.isBefore(reminderTime) && now.isBefore(s.scheduledTime)
+                        && firedReminder.add(s.id + ":" + offset)) {
+                    long minutesUntil = (long)Math.floor(((double)Duration.between(now, s.scheduledTime).toSeconds()/60)+0.5);
+                    trayIcon.displayMessage(
+                            s.name,
+                            s.description + " - starts at " + s.scheduledTime + " (" + minutesUntil + " min)",
+                            TrayIcon.MessageType.INFO
+                    );
+                }
 
-            if (!now.isBefore(reminderTime) && now.isBefore(s.scheduledTime)
-                    && firedReminder.add(s.id)) {
-                long minutesUntil = (long)Math.floor(((double)Duration.between(now, s.scheduledTime).toSeconds()/60)+0.5);
-                trayIcon.displayMessage(
-                        s.name,
-                        s.description + " - starts at " + s.scheduledTime + " (" + minutesUntil + " min)",
-                        TrayIcon.MessageType.INFO
-                );
+                
             }
-
             if (!now.isBefore(s.scheduledTime) && firedStartingNow.add(s.id)) {
-                trayIcon.displayMessage(s.name, "Starting now", TrayIcon.MessageType.INFO);
+                    trayIcon.displayMessage(s.name, "Starting now", TrayIcon.MessageType.INFO);
             }
         }
     }
