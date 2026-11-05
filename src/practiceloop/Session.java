@@ -1,5 +1,7 @@
 package practiceloop;
+
 import java.time.LocalDateTime;
+import java.util.List;
 
 public class Session {
     public final int id;
@@ -13,10 +15,11 @@ public class Session {
     public final int baseXp;
     public final Integer xpAwarded; // null until claimed
     public final String status; // "scheduled" / "completed"
+    public final List<Integer> reminderOffsets;
 
     public Session(int id, Integer activityId, String name, String description,
                     LocalDateTime scheduledTime, int plannedMinutes, int leadMinutes,
-                    Integer completedMinutes, int baseXp, Integer xpAwarded, String status) {
+                    Integer completedMinutes, int baseXp, Integer xpAwarded, String status, List<Integer> reminderOffsets) {
         this.id = id;
         this.activityId = activityId;
         this.name = name;
@@ -28,6 +31,7 @@ public class Session {
         this.baseXp = baseXp;
         this.xpAwarded = xpAwarded;
         this.status = status;
+        this.reminderOffsets = reminderOffsets;
     }
 
     @Override

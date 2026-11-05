@@ -17,6 +17,7 @@ import javafx.util.converter.IntegerStringConverter;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Stream;
@@ -170,7 +171,7 @@ public class MainView {
                 .max(Comparator.comparing(s -> s.scheduledTime));
     }
 
-    public void checkInactivity()
+    private void checkInactivity()
     {
         Optional<Session> temp = lastCompletedSession();
         if(temp.isEmpty())
@@ -178,13 +179,9 @@ public class MainView {
         Session last = temp.get();
         if(java.time.Duration.between(last.scheduledTime, LocalDateTime.now()).toDays() >= 3)
         {
-            Alert confirm = new Alert(Alert.AlertType.CONFIRMATION,
+            Alert confirm = new Alert(Alert.AlertType.INFORMATION,
                 "You haven't done the activity \"" + last.name + "\"in 3 days! You should create a session of it.");
-            confirm.showAndWait().ifPresent(response -> {
-                if (response == ButtonType.OK) {
-                    
-                }
-            });
+            confirm.showAndWait();
         }
     }
 
@@ -348,6 +345,39 @@ public class MainView {
         return field;
     }
 
+    /** A small ListView pre-filled with the given reminder offsets (minutes-before-start), newest additions re-sorted descending. */
+    private static ListView<Integer> reminderOffsetsListView(List<Integer> defaults) {
+        ListView<Integer> listView = new ListView<>();
+        listView.getItems().setAll(defaults);
+        listView.setPrefHeight(80);
+        return listView;
+    }
+
+    /** An "add one value / remove selected" row that edits the given ListView in place. */
+    private static HBox reminderOffsetsControls(ListView<Integer> offsetsView) {
+        TextField newOffsetField = wholeNumberField(5);
+        newOffsetField.setPrefWidth(60);
+
+        Button addButton = new Button("Add");
+        addButton.setOnAction(e -> {
+            int value = Integer.parseInt(newOffsetField.getText());
+            if (!offsetsView.getItems().contains(value)) {
+                offsetsView.getItems().add(value);
+                offsetsView.getItems().sort(Comparator.reverseOrder());
+            }
+        });
+
+        Button removeButton = new Button("Remove Selected");
+        removeButton.setOnAction(e -> {
+            Integer selected = offsetsView.getSelectionModel().getSelectedItem();
+            if (selected != null) {
+                offsetsView.getItems().remove(selected);
+            }
+        });
+
+        return new HBox(5, newOffsetField, addButton, removeButton);
+    }
+
     private void toggleHistory() {
         showingHistory = !showingHistory;
         historyToggleButton.setText(showingHistory ? "Back to Upcoming" : "View History");
@@ -414,6 +444,8 @@ public class MainView {
         TextField plannedMinutesField = wholeNumberField(25);
         TextField leadMinutesField = wholeNumberField(5);
         TextField xpPerMinuteField = decimalField(1.0);
+        ListView<Integer> reminderOffsetsView = reminderOffsetsListView(List.of(5,1));
+        VBox reminderOffsetsBox = new VBox(5, reminderOffsetsView, reminderOffsetsControls(reminderOffsetsView));
 
         GridPane grid = new GridPane();
         grid.setHgap(10);
@@ -424,6 +456,7 @@ public class MainView {
         grid.addRow(2, new Label("Default planned minutes"), plannedMinutesField);
         grid.addRow(3, new Label("Default lead minutes"), leadMinutesField);
         grid.addRow(4, new Label("Default XP per minute"), xpPerMinuteField);
+        grid.addRow(5, new Label("Default reminder minutes"), reminderOffsetsBox);
 
         dialog.getDialogPane().setContent(grid);
         dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
@@ -441,7 +474,8 @@ public class MainView {
                         descriptionField.getText(),
                         Integer.parseInt(plannedMinutesField.getText()),
                         Integer.parseInt(leadMinutesField.getText()),
-                        Double.parseDouble(xpPerMinuteField.getText())
+                        Double.parseDouble(xpPerMinuteField.getText()),
+                        new ArrayList<>(reminderOffsetsView.getItems())
                 );
             }
             return null;
@@ -489,6 +523,8 @@ public class MainView {
         TextField leadMinutesField = wholeNumberField(5);
         TextField xpPerMinuteField = decimalField(1.0);
         TextField baseXpField = wholeNumberField(25);
+        ListView<Integer> reminderOffsetsView = reminderOffsetsListView(List.of(30, 10, 5, 2, 1));
+        VBox reminderOffsetsBox = new VBox(5, reminderOffsetsView, reminderOffsetsControls(reminderOffsetsView));
 
         boolean[] updatingXpFields = {false};
         Runnable recomputeBaseXp = () -> {
@@ -530,6 +566,7 @@ public class MainView {
                 plannedMinutesField.setText(String.valueOf(a.defaultPlannedMinutes));
                 leadMinutesField.setText(String.valueOf(a.defaultLeadMinutes));
                 xpPerMinuteField.setText(String.valueOf(a.defaultXpPerMinute));
+                reminderOffsetsView.getItems().setAll(a.reminderOffsets);
             }
         });
 
@@ -545,6 +582,7 @@ public class MainView {
         grid.addRow(5, new Label("Lead minutes"), leadMinutesField);
         grid.addRow(6, new Label("XP per minute"), xpPerMinuteField);
         grid.addRow(7, new Label("XP (Whole Session)"), baseXpField);
+        grid.addRow(8, new Label("Reminder minutes"), reminderOffsetsBox);
 
         dialog.getDialogPane().setContent(grid);
         dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
@@ -601,7 +639,8 @@ public class MainView {
                         scheduledTime,
                         Integer.parseInt(plannedMinutesField.getText()),
                         Integer.parseInt(leadMinutesField.getText()),
-                        Integer.parseInt(baseXpField.getText())
+                        Integer.parseInt(baseXpField.getText()),
+                        new ArrayList<>(reminderOffsetsView.getItems())
                 );
                 refreshSessionList();
             }
