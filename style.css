@@ -1,0 +1,53 @@
+/* Palette pulled directly from the Figma mockup. */
+.root {
+    -fx-background-color: #F8FBFA;
+    -fx-font-size: 13px;
+    /* Default accent color (overridden per-user via Customize -> store.setEquippedColor). */
+    -accent-color: #22DF48;
+}
+
+.button {
+    /* Looked-up from the nearest ancestor that defines -accent-color - the
+       default on .root, or whatever the Customize dialog set on buttonsBar. */
+    -fx-background-color: derive(-accent-color, 40%);
+    -fx-border-color: -accent-color;
+    -fx-border-width: 2px;
+    -fx-border-radius: 8px;
+    -fx-background-radius: 8px;
+    -fx-padding: 6 14 6 14;
+    -fx-cursor: hand;
+}
+
+.button:hover {
+    -fx-background-color: derive(-accent-color, 25%);
+}
+
+.button:disabled {
+    -fx-opacity: 0.5;
+    -fx-cursor: default;
+}
+
+.button-bar {
+    -fx-background-radius: 8px;
+    -fx-border-radius: 8px;
+}
+
+.list-view {
+    -fx-background-color: transparent;
+}
+
+.list-cell {
+    -fx-background-color: #EEEEEE;
+    -fx-border-color: -accent-color;
+    -fx-border-width: 2px;
+    -fx-border-radius: 8px;
+    -fx-background-radius: 8px;
+    -fx-padding: 10px;
+    -fx-background-insets: 2.5 0 2.5 0;
+    -fx-border-insets: 2.5 0 2.5 0;
+}
+
+.list-cell:filled:selected {
+    -fx-background-color: derive(#EEEEEE, -12%);
+    -fx-border-color: derive(-accent-color, -12%);
+}

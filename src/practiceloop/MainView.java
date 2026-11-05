@@ -14,6 +14,7 @@ import javafx.util.Duration;
 import javafx.util.converter.DoubleStringConverter;
 import javafx.util.converter.IntegerStringConverter;
 
+import java.io.File;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -44,11 +45,12 @@ public class MainView {
     private final CheckBox miscOnlyCheck = new CheckBox("Misc only");
     private final HBox filterRow = new HBox(10, activityFilterBox, miscOnlyCheck);
     private final HBox buttonsBar = new HBox(10);
+    private final VBox root = new VBox(10);
 
     /** Levels at which each preset swatch unlocks, same order as PRESET_COLORS. */
     private static final int[] PRESET_LEVELS = {1, 5, 10, 15, 20, 25};
     private static final Color[] PRESET_COLORS = {
-            Color.DODGERBLUE, Color.SEAGREEN, Color.MEDIUMPURPLE,
+            Color.DODGERBLUE, Color.HOTPINK, Color.MEDIUMPURPLE,
             Color.DARKORANGE, Color.CRIMSON, Color.GOLD
     };
     private static final int CUSTOM_PICKER_LEVEL = 30;
@@ -93,10 +95,12 @@ public class MainView {
         buttonsBar.getChildren().addAll(addActivityButton, createSessionButton, startButton,
                 stopEarlyButton, historyToggleButton, customizeButton, spacer, totalXpLabel);
         buttonsBar.setPadding(new Insets(10));
+        buttonsBar.getStyleClass().add("button-bar");
 
         VBox.setVgrow(sessionList, Priority.ALWAYS);
-        VBox root = new VBox(10, buttonsBar, filterRow, countdownLabel, activeLabel, claimLabel, claimButton, sessionList);
+        root.getChildren().addAll(buttonsBar, filterRow, countdownLabel, activeLabel, claimLabel, claimButton, sessionList);
         root.setPadding(new Insets(10));
+        root.getStyleClass().add("root");
 
         refreshSessionList();
         updateCountdown();
@@ -114,7 +118,8 @@ public class MainView {
         countdownTicker.setCycleCount(Timeline.INDEFINITE);
         countdownTicker.play();
 
-        Scene scene = new Scene(root, 500, 400);
+        Scene scene = new Scene(root, 720, 480);
+        scene.getStylesheets().add(new File("style.css").toURI().toString());
         return scene;
     }
 
@@ -269,7 +274,12 @@ public class MainView {
     }
 
     private void applyAccentColor(String hexColor) {
-        buttonsBar.setStyle("-fx-background-color: " + hexColor + ";");
+        root.setStyle("-accent-color: " + hexColor + ";");
+    }
+
+    private void resetAccentColor() {
+        store.setEquippedColor(null);
+        root.setStyle("");
     }
 
     private static String toHex(Color c) {
@@ -306,7 +316,13 @@ public class MainView {
             swatches.getChildren().add(swatch);
         }
 
-        VBox content = new VBox(15, levelLabel, swatches);
+        Button resetButton = new Button("Reset to Default");
+        resetButton.setOnAction(e -> {
+            resetAccentColor();
+            dialog.close();
+        });
+
+        VBox content = new VBox(15, levelLabel, swatches, resetButton);
         content.setPadding(new Insets(20));
 
         if (level >= CUSTOM_PICKER_LEVEL) {
