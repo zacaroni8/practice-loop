@@ -20,7 +20,14 @@ if errorlevel 1 exit /b 1
 
 REM 3. jpackage needs the SQLite driver sitting next to the app jar too -
 REM    it goes on the app's classpath, same as -cp "out;lib/*" does for run.bat.
+REM    style.css ships the same way - Main.java resolves both it and
+REM    practiceloop.db against the app.dir system property set in step 5
+REM    below, not a relative/working-directory path (a real working
+REM    directory can't be trusted for a double-clicked native app - confirmed
+REM    this breaks on macOS, where it resets to "/" unconditionally).
 copy lib\sqlite-jdbc-3.53.4.0.jar dist-input\ >nul
+if errorlevel 1 exit /b 1
+copy style.css dist-input\ >nul
 if errorlevel 1 exit /b 1
 
 REM 4. Build a custom runtime image with jlink, using the real JavaFX jmods
@@ -39,14 +46,8 @@ REM    nothing else required on the machine that runs it.
 if exist dist rmdir /s /q dist
 jpackage --type app-image --name "Practice Loop" --app-version 2.0.0 ^
     --input dist-input --main-jar practiceloop.jar --main-class practiceloop.Main ^
-    --runtime-image javafx-runtime-image --dest dist
-if errorlevel 1 exit /b 1
-
-REM 6. style.css is loaded at runtime via a relative path (new File("style.css")),
-REM    resolved against the packaged app's working directory - which is the
-REM    top-level folder next to Practice Loop.exe, NOT the app\ subfolder that
-REM    --input copies into. Has to be placed there as a separate step.
-copy style.css "dist\Practice Loop\style.css" >nul
+    --runtime-image javafx-runtime-image --dest dist ^
+    --java-options "-Dapp.dir=$APPDIR"
 if errorlevel 1 exit /b 1
 
 echo.

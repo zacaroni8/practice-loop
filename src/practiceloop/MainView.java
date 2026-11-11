@@ -69,7 +69,7 @@ public class MainView {
         this.notifier = notifier;
     }
 
-    public Scene createScene() {
+    public Scene createScene(File appDir) {
         addActivityButton.setOnAction(e -> showAddActivityDialog());
         createSessionButton.setOnAction(e -> showCreateSessionDialog());
 
@@ -119,7 +119,7 @@ public class MainView {
         countdownTicker.play();
 
         Scene scene = new Scene(root, 720, 480);
-        scene.getStylesheets().add(new File("style.css").toURI().toString());
+        scene.getStylesheets().add(new File(appDir, "style.css").toURI().toString());
         return scene;
     }
 
