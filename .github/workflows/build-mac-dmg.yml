@@ -13,6 +13,10 @@ on:
 jobs:
   build-dmg:
     runs-on: macos-latest
+    # The built-in GITHUB_TOKEN defaults to read-only - uploading a release
+    # asset needs this explicitly granted, or gh release upload gets a 403.
+    permissions:
+      contents: write
     steps:
       - name: Check out repo
         uses: actions/checkout@v4
