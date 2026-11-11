@@ -42,5 +42,12 @@ jpackage --type app-image --name "Practice Loop" --app-version 2.0.0 ^
     --runtime-image javafx-runtime-image --dest dist
 if errorlevel 1 exit /b 1
 
+REM 6. style.css is loaded at runtime via a relative path (new File("style.css")),
+REM    resolved against the packaged app's working directory - which is the
+REM    top-level folder next to Practice Loop.exe, NOT the app\ subfolder that
+REM    --input copies into. Has to be placed there as a separate step.
+copy style.css "dist\Practice Loop\style.css" >nul
+if errorlevel 1 exit /b 1
+
 echo.
 echo Done - see dist\Practice Loop\Practice Loop.exe
