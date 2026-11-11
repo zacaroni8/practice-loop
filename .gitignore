@@ -2,3 +2,6 @@ out/
 practiceloop.db
 lib/
 lib.zip
+dist/
+dist-input/
+javafx-runtime-image/
