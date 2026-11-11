@@ -1,0 +1,79 @@
+name: Build Mac .dmg
+
+# jpackage can't cross-compile - producing a real .dmg requires actually
+# running it on macOS. Triggered manually (not on every push) since this is
+# a release artifact, not something needed on every commit.
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "Existing GitHub Release tag to attach the .dmg to (e.g. v2.0.0)"
+        required: true
+
+jobs:
+  build-dmg:
+    runs-on: macos-latest
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 25
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "25"
+
+      # Two separate JavaFX downloads, same as Windows needs lib/javafx-sdk
+      # (plain jars, for compiling) and lib/javafx-jmods (for jlink - jlink
+      # needs real .jmod files to bundle JavaFX's native libraries, a plain
+      # SDK jar isn't enough, confirmed while getting the Windows build
+      # working).
+      - name: Download JavaFX SDK (for compiling)
+        run: |
+          curl -L -o javafx-sdk.zip https://download2.gluonhq.com/openjfx/25/openjfx-25_osx-aarch64_bin-sdk.zip
+          unzip -q javafx-sdk.zip -d javafx-sdk-extracted
+          mv javafx-sdk-extracted/*/ javafx-sdk
+
+      - name: Download JavaFX jmods (for jlink)
+        run: |
+          curl -L -o javafx-jmods.zip https://download2.gluonhq.com/openjfx/25/openjfx-25_osx-aarch64_bin-jmods.zip
+          unzip -q javafx-jmods.zip -d javafx-jmods-extracted
+          mv javafx-jmods-extracted/*/ javafx-jmods
+
+      - name: Download SQLite JDBC driver
+        run: curl -L -o sqlite-jdbc-3.53.4.0.jar https://github.com/xerial/sqlite-jdbc/releases/download/3.53.4.0/sqlite-jdbc-3.53.4.0.jar
+
+      - name: Compile
+        run: |
+          mkdir -p out
+          javac --module-path javafx-sdk/lib --add-modules javafx.controls,javafx.fxml \
+            -cp sqlite-jdbc-3.53.4.0.jar -d out src/practiceloop/*.java
+
+      - name: Bundle into a runnable jar
+        run: |
+          mkdir -p dist-input
+          jar cfe dist-input/practiceloop.jar practiceloop.Main -C out .
+          cp sqlite-jdbc-3.53.4.0.jar dist-input/
+          cp style.css dist-input/
+
+      - name: Build a custom runtime image with jlink
+        run: |
+          jlink --module-path javafx-jmods --add-modules javafx.controls,javafx.fxml,java.sql \
+            --output javafx-runtime-image --strip-debug --no-header-files --no-man-pages
+
+      # Unsigned - macOS Gatekeeper will show an "unidentified developer"
+      # warning when someone first opens this. Proper code signing needs a
+      # paid Apple Developer account, out of scope here. Worth telling
+      # whoever downloads it: right-click -> Open the first time, instead of
+      # double-clicking, to get past that warning.
+      - name: Package .dmg with jpackage
+        run: |
+          jpackage --type dmg --name "Practice Loop" --app-version 2.0.0 \
+            --input dist-input --main-jar practiceloop.jar --main-class practiceloop.Main \
+            --runtime-image javafx-runtime-image --dest dist \
+            --java-options "-Dapp.dir=\$APPDIR"
+
+      - name: Upload .dmg to the Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "${{ inputs.release_tag }}" dist/*.dmg --clobber

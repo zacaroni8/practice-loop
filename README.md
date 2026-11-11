@@ -4,6 +4,17 @@ A desktop app for scheduling practice/work sessions, getting a real OS
 notification before and when they start, and earning XP for completing
 them. Built in Java with JavaFX and SQLite.
 
+## Just want to run it?
+
+No JDK, no `lib/` setup — grab a prebuilt copy from the
+[Releases page](../../releases): a Windows app folder (unzip and run
+`Practice Loop.exe`) or a Mac `.dmg`. On Mac, the first time you open it,
+right-click the app and choose **Open** instead of double-clicking — it's
+not code-signed (that needs a paid Apple Developer account), so Gatekeeper
+will otherwise refuse to launch it.
+
+Everything below this is for building it from source instead.
+
 ## 1. Install a JDK
 
 You need a Java Development Kit, version 25 or newer. This project was
@@ -83,3 +94,24 @@ run.
 ```
 java -jar lib/junit-platform-console-standalone-6.1.3.jar execute --class-path out --select-class practiceloop.Tester --details=tree
 ```
+
+## 5. Building a standalone native app (optional)
+
+This is how the Releases page's downloads actually get built - a real
+`Practice Loop.exe`/`.app` with its own bundled Java runtime, so whoever
+runs it doesn't need a JDK or a `lib/` folder at all.
+
+**Windows:** needs one extra one-time download beyond the usual `lib/`
+setup - a JavaFX **jmods** package (not the SDK from step 2 - `jlink`
+needs actual `.jmod` files to bundle JavaFX's native rendering libraries
+correctly). Go to https://gluonhq.com/products/javafx/, same version/OS as
+before, but pick **jmods** as the package type, and place the result at
+`lib/javafx-jmods/` (so you get `lib/javafx-jmods/javafx.controls.jmod`,
+etc.). Then just run `package-windows.bat` - output lands at
+`dist/Practice Loop/Practice Loop.exe`.
+
+**Mac:** `jpackage` can't cross-compile - producing a `.dmg` needs an
+actual Mac, or (what this repo uses) GitHub Actions' free macOS runners.
+From this repo's **Actions** tab, run the **Build Mac .dmg** workflow,
+giving it an existing release tag (e.g. `v2.0.0`) - it builds the `.dmg`
+in the cloud and attaches it to that Release automatically.
